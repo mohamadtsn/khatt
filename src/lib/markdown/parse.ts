@@ -8,6 +8,8 @@ import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 import { remarkCaptureFrontMatter, rehypeFrontMatter } from './plugins/front-matter';
 import { rehypeFootnoteLabels, rehypeFootnotes } from './plugins/footnotes';
+import remarkMath from 'remark-math';
+import { rehypeLazyBlocks } from './plugins/lazy-blocks';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'hast';
 import { schema, DATA_IMAGE } from './sanitize-schema';
@@ -47,6 +49,7 @@ export function pipeline() {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkMath, { singleDollarTextMath: true })
     .use(remarkFrontmatter, ['yaml'])
     .use(remarkCaptureFrontMatter)
     .use(remarkRehype, { allowDangerousHtml: true })
@@ -57,6 +60,7 @@ export function pipeline() {
     /* After sanitize on purpose: this is the only code allowed to add an id, and
        the schema deliberately strips ids that came from the document. */
     .use(rehypeFootnotes)
+    .use(rehypeLazyBlocks)
     .use(rehypeDataImageOnly)
     .use(rehypeExternalLinks)
     .use(rehypeStringify, { allowDangerousHtml: false });
