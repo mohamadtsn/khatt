@@ -19,6 +19,7 @@ import {
 import { useDocuments } from '@/state/documents';
 import type { Dir } from '@/lib/storage/workspace';
 import { editorTheme } from './theme';
+import { smartLists } from './extensions/smart-lists';
 
 let sharedView: EditorView | null = null;
 /** The find bar and the toolbar command the editor through this. */
@@ -33,6 +34,7 @@ function extensionsFor(dir: Dir) {
     history(),
     markdown(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    smartLists,
     keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
     editorTheme,
     EditorView.lineWrapping,

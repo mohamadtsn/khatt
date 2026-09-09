@@ -27,3 +27,17 @@ test.fixme('keeps undo history per document across a switch', async ({ page }) =
   await page.keyboard.press('ControlOrMeta+z');
   await expect(page.locator(editor)).not.toContainText('first document');
 });
+
+test('Enter continues a list and a second Enter ends it', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+a');
+  await page.keyboard.type('- one');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('two');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('after');
+  await expect(page.locator('.cm-content')).toContainText('- two');
+  await expect(page.locator('.cm-content')).not.toContainText('- after');
+});
