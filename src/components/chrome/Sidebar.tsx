@@ -28,7 +28,9 @@ export function Sidebar() {
           switches instantly — animating a grid track would animate layout. */}
       <aside
         aria-label="Explorer"
-        aria-hidden={!open}
+        /* `inert` rather than aria-hidden: a closed panel must also stop taking
+           Tab focus, and aria-hidden alone leaves its buttons reachable. */
+        inert={!open}
         className={`material z-20 flex h-full w-60 flex-col gap-1 overflow-y-auto p-2
                     transition-transform duration-[var(--dur-slow)] ease-[var(--ease-out)]
                     ${open ? 'translate-x-0' : '-translate-x-full rtl:translate-x-full'}`}

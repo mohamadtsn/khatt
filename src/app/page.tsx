@@ -29,6 +29,10 @@ export default function Page() {
   const view = useUi((s) => s.view);
   const reading = useUi((s) => s.reading);
 
+  // Reading mode is the preview and nothing else; leaving the editor mounted
+  // behind the hidden chrome leaves a scrollable region no one can reach.
+  const shown = reading ? 'preview' : view;
+
   const panes = useRef<HTMLDivElement>(null);
   const editorScroller = useRef<HTMLElement | null>(null);
   const previewScroller = useRef<HTMLElement | null>(null);
@@ -40,16 +44,16 @@ export default function Page() {
     if (!ready) return;
     editorScroller.current = panes.current?.querySelector('.cm-scroller') ?? null;
     previewScroller.current = panes.current?.querySelector('.preview') ?? null;
-  }, [ready, view]);
+  }, [ready, shown]);
 
   useSyncedScroll(editorScroller, previewScroller);
 
   if (!ready) return <main className="h-full" aria-busy="true" />;
 
   const columns =
-    view === 'editor'
+    shown === 'editor'
       ? '1fr 0 0'
-      : view === 'preview'
+      : shown === 'preview'
         ? '0 0 1fr'
         : `${split}fr 4px ${100 - split}fr`;
 
@@ -61,13 +65,13 @@ export default function Page() {
         <Sidebar />
         <div ref={panes} className="relative grid min-h-0" style={{ gridTemplateColumns: columns }}>
           <FindBar />
-          <section className="min-h-0 overflow-hidden" hidden={view === 'preview'}>
+          <section className="min-h-0 overflow-hidden" hidden={shown === 'preview'}>
             <CodeEditor />
           </section>
           <Divider />
           <section
             className="min-h-0 border-s border-[var(--color-border)]"
-            hidden={view === 'editor'}
+            hidden={shown === 'editor'}
           >
             <Preview />
           </section>

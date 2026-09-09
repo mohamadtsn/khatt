@@ -12,7 +12,9 @@
   --gray-850: oklch(0.240 0.010 260);
   --gray-900: oklch(0.180 0.008 260);
   --gray-950: oklch(0.140 0.006 260);
-  --blue-500: oklch(0.62 0.19 258);
+  /* Dark enough that white text on it clears 4.5:1 — the accent is a
+     background for text, not only a decorative colour. */
+  --blue-500: oklch(0.55 0.20 258);
   --blue-400: oklch(0.70 0.17 258);
   --red-500:  oklch(0.60 0.21 25);
 
@@ -47,7 +49,9 @@
   --color-border-strong: oklch(0 0 0 / 0.16);
   --color-text-primary: var(--gray-900);
   --color-text-secondary: var(--gray-700);
-  --color-text-tertiary: var(--gray-500);
+  /* Darker than --gray-500: tertiary text is used at 12px, where the lighter
+     value fell to 3.55:1 against the canvas and missed AA. */
+  --color-text-tertiary: oklch(0.52 0.012 260);
   --color-accent: var(--blue-500);
   --color-accent-text: oklch(1 0 0);
   --color-danger: var(--red-500);

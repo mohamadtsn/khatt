@@ -41,7 +41,11 @@ function extensionsFor(dir: Dir) {
     keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap, indentWithTab]),
     editorTheme,
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ dir, spellcheck: 'false' }),
+    EditorView.contentAttributes.of({
+      dir,
+      spellcheck: 'false',
+      'aria-label': 'Markdown source',
+    }),
     EditorView.updateListener.of((update) => {
       if (!update.docChanged) return;
       useDocuments.getState().setContent(

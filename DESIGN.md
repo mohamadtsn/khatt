@@ -124,7 +124,13 @@ Rules:
 ## Accessibility
 
 - 2px focus ring, 2px offset, `:focus-visible` only.
-- AA contrast throughout; AAA for preview body text.
+- AA contrast throughout; AAA for preview body text. Two token values are set by
+  that constraint rather than by taste: `--color-accent` is dark enough that white
+  text on it clears 4.5:1, and `--color-text-tertiary` is darker than the grey
+  scale's mid step because it is used at 12px. Re-check both with axe before
+  lightening either.
+- A panel that is closed is `inert`, not merely `aria-hidden` — hidden content
+  that still takes Tab focus is worse than either.
 - Every menu and dialog is fully keyboard operable, traps focus while open, and
   restores focus to its trigger on close.
 - Icon-only buttons always carry `aria-label`.
