@@ -8,6 +8,7 @@ import { renderMathIn } from '@/lib/lazy/katex';
 import { renderMermaidIn } from '@/lib/lazy/mermaid';
 import { isDarkNow } from '@/lib/theme-state';
 import { useReturnPath } from './useReturnPath';
+import { SelectionToolbar } from './SelectionToolbar';
 
 export function Preview() {
   const host = useRef<HTMLDivElement>(null);
@@ -32,12 +33,15 @@ export function Preview() {
   }, [html, theme]);
 
   return (
-    <div
-      ref={host}
-      className="preview h-full overflow-auto px-8 py-6"
-      dir={doc?.dir ?? 'ltr'}
-      contentEditable={!readingLocked}
-      suppressContentEditableWarning
-    />
+    <>
+      <SelectionToolbar host={host} />
+      <div
+        ref={host}
+        className="preview h-full overflow-auto px-8 py-6"
+        dir={doc?.dir ?? 'ltr'}
+        contentEditable={!readingLocked}
+        suppressContentEditableWarning
+      />
+    </>
   );
 }
