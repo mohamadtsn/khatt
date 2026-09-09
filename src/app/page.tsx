@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { CodeEditor } from '@/components/editor/CodeEditor';
+import { FindBar } from '@/components/chrome/FindBar';
 import { Menu, MenuItem } from '@/components/ui/Menu';
 import { Icon } from '@/components/ui/Icon';
 import { toast } from '@/components/ui/Toast';
@@ -28,7 +29,8 @@ export default function Page() {
           <MenuItem onSelect={() => toast('Nothing here yet')}>Say hello</MenuItem>
         </Menu>
       </header>
-      <div className="grid min-h-0 grid-cols-2">
+      <div className="relative grid min-h-0 grid-cols-2">
+        <FindBar />
         <section className="min-h-0 overflow-hidden">
           <CodeEditor />
         </section>

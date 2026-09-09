@@ -10,6 +10,7 @@ import {
 } from '@codemirror/view';
 import { history, historyKeymap, defaultKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
+import { search, searchKeymap, highlightSelectionMatches } from '@codemirror/search';
 import {
   syntaxHighlighting,
   defaultHighlightStyle,
@@ -32,10 +33,12 @@ function extensionsFor(dir: Dir) {
     drawSelection(),
     highlightActiveLine(),
     history(),
+    search({ top: true }),
+    highlightSelectionMatches(),
     markdown(),
     syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
     smartLists,
-    keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]),
+    keymap.of([...defaultKeymap, ...historyKeymap, ...foldKeymap, ...searchKeymap, indentWithTab]),
     editorTheme,
     EditorView.lineWrapping,
     EditorView.contentAttributes.of({ dir, spellcheck: 'false' }),
