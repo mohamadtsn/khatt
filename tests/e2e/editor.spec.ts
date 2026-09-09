@@ -11,8 +11,8 @@ test('types into the editor and persists across a reload', async ({ page }) => {
   await expect(page.locator(editor)).toContainText('# Hello');
 });
 
-// unskip in Task 21, when the sidebar provides the document switcher
-test.fixme('keeps undo history per document across a switch', async ({ page }) => {
+test('keeps undo history per document across a switch', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('md-editor-explorer', 'open'));
   await page.goto('/');
   await page.locator(editor).click();
   await page.keyboard.type('first document');
@@ -22,7 +22,7 @@ test.fixme('keeps undo history per document across a switch', async ({ page }) =
   await page.keyboard.type('second document');
 
   // Back to the first: its own history must still be there.
-  await page.getByRole('button', { name: /document\.md/ }).click();
+  await page.getByRole('button', { name: 'document.md', exact: true }).click();
   await page.locator(editor).click();
   await page.keyboard.press('ControlOrMeta+z');
   await expect(page.locator(editor)).not.toContainText('first document');
