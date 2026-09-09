@@ -10,9 +10,6 @@ The legacy renderer ran its emphasis pass over its own generated HTML, so the
 visible in `tests/golden/reference-links.html`. That is a bug in the old build;
 the new pipeline emits a correct `target`, so the stray `<em>` is gone.
 
-`front-matter: pre`
-Pending: front matter is not yet recognised. Removed in Task 5.
-
 `footnotes: hr`
 Pending: the `<hr class="fn-sep">` separator above the footnote list is not yet
 emitted. Removed in Task 6.

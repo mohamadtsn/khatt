@@ -5,6 +5,8 @@ import remarkRehype from 'remark-rehype';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
+import remarkFrontmatter from 'remark-frontmatter';
+import { remarkCaptureFrontMatter, rehypeFrontMatter } from './plugins/front-matter';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'hast';
 import { schema, DATA_IMAGE } from './sanitize-schema';
@@ -44,8 +46,11 @@ export function pipeline() {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkFrontmatter, ['yaml'])
+    .use(remarkCaptureFrontMatter)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeFrontMatter)
     .use(rehypeSanitize, schema)
     .use(rehypeDataImageOnly)
     .use(rehypeExternalLinks)
