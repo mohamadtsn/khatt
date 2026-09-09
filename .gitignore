@@ -18,3 +18,5 @@ public/sw.js.map
 
 # Next.js telemetry config written by the CLI
 cache/
+
+.idea/
