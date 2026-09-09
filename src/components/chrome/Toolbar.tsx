@@ -7,6 +7,8 @@ import { Icon } from '@/components/ui/Icon';
 import { ExplorerToggle } from './ExplorerToggle';
 import { ThemeToggle } from './ThemeToggle';
 import { getEditorView } from '@/components/editor/CodeEditor';
+import { copyAs, downloadHtml, downloadMarkdown, printPdf } from '@/lib/export';
+import { toast } from '@/components/ui/Toast';
 import { isolateHistory } from '@codemirror/commands';
 
 const VIEW_ORDER = ['both', 'editor', 'preview'] as const;
@@ -24,6 +26,10 @@ function clearEditor(): void {
   });
   view.focus();
 }
+
+/* The preview is the source for HTML and text export, so it is looked up rather
+   than passed down: it is a single, always-present element. */
+const previewRoot = (): HTMLElement | null => document.querySelector('.preview');
 
 export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
   const doc = useActiveDoc();
@@ -45,6 +51,43 @@ export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
       </span>
 
       <span className="flex-1" />
+
+      <Menu trigger={<><Icon name="export" /> <span className="hidden md:inline">Export</span></>} label="Export as">
+        <MenuItem onSelect={() => doc && downloadMarkdown(doc)}>Markdown</MenuItem>
+        <MenuItem
+          onSelect={() => {
+            const root = previewRoot();
+            if (doc && root) void downloadHtml(doc, root);
+          }}
+        >
+          HTML
+        </MenuItem>
+        <MenuItem onSelect={printPdf}>PDF</MenuItem>
+      </Menu>
+
+      <Menu trigger={<><Icon name="copy" /> <span className="hidden md:inline">Copy</span></>} label="Copy as">
+        {(
+          [
+            ['markdown', 'Markdown'],
+            ['html', 'Rich HTML'],
+            ['text', 'Plain text'],
+          ] as const
+        ).map(([kind, label]) => (
+          <MenuItem
+            key={kind}
+            onSelect={() => {
+              const root = previewRoot();
+              if (!doc || !root) return;
+              void copyAs(kind, doc, root).then(
+                () => toast(`Copied as ${label.toLowerCase()}`),
+                () => toast('Could not copy', 'error')
+              );
+            }}
+          >
+            {label}
+          </MenuItem>
+        ))}
+      </Menu>
 
       <Button
         label="Reading mode"

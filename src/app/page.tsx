@@ -8,6 +8,7 @@ import { Toolbar } from '@/components/chrome/Toolbar';
 import { Divider } from '@/components/chrome/Divider';
 import { StatusBar } from '@/components/chrome/StatusBar';
 import { ReadingControls } from '@/components/chrome/ReadingControls';
+import { DropZone } from '@/components/chrome/DropZone';
 import { useSyncedScroll } from '@/components/preview/useSyncedScroll';
 import { useDocuments } from '@/state/documents';
 import { useUi } from '@/state/ui';
@@ -75,6 +76,7 @@ export default function Page() {
 
       <StatusBar />
       <ReadingControls />
+      <DropZone />
 
       {/* Kept out of the toolbar so the menu can close before the picker opens. */}
       <input
