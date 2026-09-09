@@ -185,3 +185,10 @@
   }
   .motion-transform { transform: none !important; }
 }
+
+/* Toasts arrive from the edge they live on, so the motion says where they came
+   from rather than merely announcing that something appeared. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
