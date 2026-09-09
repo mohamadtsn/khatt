@@ -9,7 +9,7 @@ test('serves a valid manifest', async ({ page }) => {
     icons: { purpose?: string }[];
   };
   expect(manifest.display).toBe('standalone');
-  expect(manifest.name).toContain('Markdown');
+  expect(manifest.name).toContain('Khatt');
   expect(manifest.icons.some((i) => i.purpose === 'maskable')).toBe(true);
 });
 
