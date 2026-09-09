@@ -193,3 +193,23 @@
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Reading mode hides the chrome and gives the preview the whole window; the
+   print stylesheet does the same thing, which is why both key off one class. */
+body.reading header,
+body.reading footer,
+body.reading aside,
+body.reading [role='separator'] {
+  display: none;
+}
+
+body.reading .preview {
+  --measure: 74ch;
+  font-size: 16px;
+}
+
+@media print {
+  header, footer, aside, [role='separator'], [role='toolbar'] { display: none !important; }
+  .preview { overflow: visible !important; height: auto !important; }
+  body { background: #fff; color: #000; }
+}
