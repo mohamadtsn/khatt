@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "capture-golden": "node scripts/capture-golden.mjs"
+    "capture-golden": "node scripts/capture-golden.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -31,6 +32,7 @@
     "rehype-raw": "^7.0.0",
     "rehype-remark": "^10.0.1",
     "rehype-sanitize": "^6.0.0",
+    "rehype-stringify": "^10.0.1",
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
