@@ -2,17 +2,25 @@
 # ==============================================================================
 # Khatt Production Deployment Script
 # 
+# Supports both:
+#   1. Native build (using host Node.js & npm)
+#   2. Containerized build (using Docker — no Node.js required on host!)
+# 
 # Usage:
-#   First-time or continuous deployment:
+#   Default (auto-detects Node.js or Docker):
 #     sudo ./deploy/deploy.sh
-#   Or run via curl:
-#     curl -fsSL https://raw.githubusercontent.com/mohamadtsn/khatt/main/deploy/deploy.sh | sudo bash
+# 
+#   Force Docker container build:
+#     sudo ./deploy/deploy.sh --docker
+# 
+#   Force Host native build:
+#     sudo ./deploy/deploy.sh --native
 # ==============================================================================
 
 set -euo pipefail
 
 # ------------------------------------------------------------------------------
-# Configuration (Override via environment variables if desired)
+# Configuration & Defaults
 # ------------------------------------------------------------------------------
 APP_NAME="${APP_NAME:-khatt}"
 REPO_URL="${REPO_URL:-https://github.com/mohamadtsn/khatt.git}"
@@ -21,6 +29,7 @@ DEFAULT_SOURCE_DIR="/opt/${APP_NAME}"
 WEB_ROOT="${WEB_ROOT:-/var/www/${APP_NAME}}"
 NGINX_AVAILABLE="/etc/nginx/sites-available/${APP_NAME}.conf"
 NGINX_ENABLED="/etc/nginx/sites-enabled/${APP_NAME}.conf"
+BUILD_MODE="${BUILD_MODE:-auto}" # auto | native | docker
 
 # Color helpers
 C_RESET='\033[0m'
@@ -35,44 +44,90 @@ log_success() { echo -e "${C_GREEN}${C_BOLD}[SUCCESS]${C_RESET} $*"; }
 log_warn()    { echo -e "${C_YELLOW}${C_BOLD}[WARN]${C_RESET} $*"; }
 log_error()   { echo -e "${C_RED}${C_BOLD}[ERROR]${C_RESET} $*" >&2; }
 
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --docker)
+            BUILD_MODE="docker"
+            shift
+            ;;
+        --native)
+            BUILD_MODE="native"
+            shift
+            ;;
+        -h|--help)
+            echo "Usage: sudo $0 [--docker|--native]"
+            echo "  --docker : Execute build inside Docker container (host doesn't need Node.js)"
+            echo "  --native : Execute build directly on host using Node.js & npm"
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 # ------------------------------------------------------------------------------
 # 1. Privilege Check
 # ------------------------------------------------------------------------------
 if [[ $EUID -ne 0 ]]; then
-    log_warn "This script requires superuser privileges to write to ${WEB_ROOT} and configure Nginx."
+    log_warn "This script requires superuser privileges to deploy to ${WEB_ROOT} and manage Nginx."
     log_warn "Rerunning with sudo..."
     exec sudo -E bash "$0" "$@"
 fi
 
 # ------------------------------------------------------------------------------
-# 2. Dependency Verification
+# 2. Dependency Verification & Build Mode Decision
 # ------------------------------------------------------------------------------
 log_info "Checking prerequisites..."
 
-for cmd in git node npm nginx; do
+for cmd in git nginx; do
     if ! command -v "$cmd" &>/dev/null; then
-        log_error "Missing required command: '$cmd'"
-        if [[ "$cmd" == "node" || "$cmd" == "npm" ]]; then
-            echo -e "To install Node.js 22 LTS on Ubuntu/Debian:\n" \
-                    "  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -\n" \
-                    "  apt-get install -y nodejs\n"
-        elif [[ "$cmd" == "nginx" ]]; then
-            echo -e "To install Nginx on Ubuntu/Debian:\n" \
-                    "  apt-get update && apt-get install -y nginx rsync\n"
-        fi
+        log_error "Missing required core tool: '$cmd'"
+        echo -e "Install on Debian/Ubuntu with:\n  apt-get update && apt-get install -y git nginx rsync\n"
         exit 1
     fi
 done
 
-NODE_VERSION=$(node -v | tr -d 'v' | cut -d'.' -f1)
-if [[ "${NODE_VERSION}" -lt 20 ]]; then
-    log_warn "Detected Node.js v${NODE_VERSION}. Node.js 22 or higher is strongly recommended."
+# Determine build method
+HAS_NODE=false
+HAS_DOCKER=false
+
+if command -v node &>/dev/null && command -v npm &>/dev/null; then
+    HAS_NODE=true
 fi
 
+if command -v docker &>/dev/null; then
+    HAS_DOCKER=true
+fi
+
+if [[ "${BUILD_MODE}" == "auto" ]]; then
+    if [[ "${HAS_NODE}" == "true" ]]; then
+        BUILD_MODE="native"
+    elif [[ "${HAS_DOCKER}" == "true" ]]; then
+        BUILD_MODE="docker"
+    else
+        log_error "Neither Node.js (with npm) nor Docker is installed on this system."
+        echo -e "\nPlease install either:"
+        echo -e "  A) Node.js (LTS):\n     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs"
+        echo -e "  B) Docker:\n     curl -fsSL https://get.docker.com | bash\n"
+        exit 1
+    fi
+elif [[ "${BUILD_MODE}" == "docker" && "${HAS_DOCKER}" != "true" ]]; then
+    log_error "Docker build was requested but Docker is not installed on this host."
+    echo -e "Install Docker with:\n  curl -fsSL https://get.docker.com | bash\n"
+    exit 1
+elif [[ "${BUILD_MODE}" == "native" && "${HAS_NODE}" != "true" ]]; then
+    log_error "Native build was requested but Node.js/npm is not installed on this host."
+    echo -e "Install Node.js with:\n  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs\n"
+    exit 1
+fi
+
+log_info "Selected build engine: ${C_BOLD}${BUILD_MODE}${C_RESET}"
+
 # ------------------------------------------------------------------------------
-# 3. Source Repository Setup (First-time clone or Pull latest)
+# 3. Source Repository Setup (Clone if first time, pull if existing)
 # ------------------------------------------------------------------------------
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CURRENT_GIT_ROOT=""
 if git rev-parse --show-toplevel &>/dev/null; then
     CURRENT_GIT_ROOT="$(git rev-parse --show-toplevel)"
@@ -80,10 +135,10 @@ fi
 
 if [[ -n "${CURRENT_GIT_ROOT}" && -f "${CURRENT_GIT_ROOT}/package.json" ]]; then
     SOURCE_DIR="${CURRENT_GIT_ROOT}"
-    log_info "Running from existing local repository at: ${SOURCE_DIR}"
+    log_info "Running from existing local repo at: ${SOURCE_DIR}"
     cd "${SOURCE_DIR}"
     if git remote get-url origin &>/dev/null; then
-        log_info "Fetching latest changes from origin/${BRANCH}..."
+        log_info "Fetching latest commits from origin/${BRANCH}..."
         git fetch origin "${BRANCH}"
         git checkout "${BRANCH}"
         git reset --hard "origin/${BRANCH}"
@@ -103,32 +158,43 @@ else
     cd "${SOURCE_DIR}"
 fi
 
-log_success "Source directory ready at: $(git rev-parse --short HEAD)"
+log_success "Source repository ready at commit: $(git rev-parse --short HEAD)"
 
 # ------------------------------------------------------------------------------
-# 4. Dependency Installation & Production Build
+# 4. Production Build (Native or Containerized)
 # ------------------------------------------------------------------------------
-log_info "Installing dependencies..."
-if [[ -f "package-lock.json" ]]; then
-    npm ci --prefer-offline --no-audit --no-fund
-else
-    npm install --no-audit --no-fund
+if [[ "${BUILD_MODE}" == "native" ]]; then
+    log_info "Installing dependencies via npm..."
+    if [[ -f "package-lock.json" ]]; then
+        npm ci --prefer-offline --no-audit --no-fund
+    else
+        npm install --no-audit --no-fund
+    fi
+
+    log_info "Compiling static export with Next.js..."
+    npm run build
+
+elif [[ "${BUILD_MODE}" == "docker" ]]; then
+    log_info "Running static export inside Docker build container..."
+    if command -v docker &>/dev/null && docker compose version &>/dev/null; then
+        docker compose run --rm build
+    else
+        # Direct BuildKit export without needing docker-compose
+        DOCKER_BUILDKIT=1 docker build --target exporter --output type=local,dest=out .
+    fi
 fi
 
-log_info "Building static export (output to out/)..."
-npm run build
-
 if [[ ! -f "out/index.html" ]]; then
-    log_error "Build failed: out/index.html not found."
+    log_error "Build failed: 'out/index.html' does not exist."
     exit 1
 fi
 
-log_success "Production build completed successfully."
+log_success "Build completed successfully."
 
 # ------------------------------------------------------------------------------
 # 5. Deploy to Web Root
 # ------------------------------------------------------------------------------
-log_info "Syncing static files to ${WEB_ROOT}..."
+log_info "Deploying static assets to ${WEB_ROOT}..."
 mkdir -p "${WEB_ROOT}"
 
 if command -v rsync &>/dev/null; then
@@ -139,59 +205,52 @@ else
     cp -r out/* "${WEB_ROOT}/"
 fi
 
-# Set proper ownership and permissions
 if id -u www-data &>/dev/null; then
     chown -R www-data:www-data "${WEB_ROOT}"
 fi
 chmod -R 755 "${WEB_ROOT}"
 
-log_success "Files successfully placed in ${WEB_ROOT}."
+log_success "Static export deployed to ${WEB_ROOT}."
 
 # ------------------------------------------------------------------------------
-# 6. Nginx Configuration
+# 6. Host Nginx Configuration & Reload
 # ------------------------------------------------------------------------------
 NGINX_CONF_TEMPLATE="${SOURCE_DIR}/deploy/nginx.conf"
 
 if [[ -f "${NGINX_CONF_TEMPLATE}" ]]; then
     if [[ ! -f "${NGINX_AVAILABLE}" ]]; then
-        log_info "First-time Nginx setup: installing ${NGINX_AVAILABLE}..."
+        log_info "Installing initial Nginx configuration to ${NGINX_AVAILABLE}..."
         cp "${NGINX_CONF_TEMPLATE}" "${NGINX_AVAILABLE}"
     else
-        log_info "Nginx site configuration exists at ${NGINX_AVAILABLE} (preserving your custom edits)."
+        log_info "Existing Nginx config preserved at ${NGINX_AVAILABLE}."
     fi
 
-    # Ensure symlink in sites-enabled exists
     if [[ ! -L "${NGINX_ENABLED}" && -d "/etc/nginx/sites-enabled" ]]; then
-        log_info "Enabling Nginx site..."
+        log_info "Creating symlink in sites-enabled..."
         ln -sf "${NGINX_AVAILABLE}" "${NGINX_ENABLED}"
     fi
 
-    # Validate and reload Nginx
     log_info "Testing Nginx configuration syntax..."
     nginx -t
 
-    log_info "Reloading Nginx service..."
+    log_info "Reloading host Nginx..."
     if command -v systemctl &>/dev/null; then
         systemctl reload nginx
     else
         service nginx reload
     fi
-    log_success "Nginx reloaded successfully."
-else
-    log_warn "Template ${NGINX_CONF_TEMPLATE} not found. Skipping automated Nginx config."
+    log_success "Host Nginx reloaded successfully."
 fi
 
 # ------------------------------------------------------------------------------
-# 7. Summary
+# 7. Deployment Summary
 # ------------------------------------------------------------------------------
 echo -e "\n${C_GREEN}${C_BOLD}======================================================${C_RESET}"
-echo -e "${C_GREEN}${C_BOLD} ✔ Deployment completed successfully!${C_RESET}"
+echo -e "${C_GREEN}${C_BOLD} ✔ Khatt successfully deployed! (${BUILD_MODE} mode)${C_RESET}"
 echo -e "${C_GREEN}${C_BOLD}======================================================${C_RESET}"
 echo -e "Web Root:       ${C_BOLD}${WEB_ROOT}${C_RESET}"
 echo -e "Nginx Config:   ${C_BOLD}${NGINX_AVAILABLE}${C_RESET}"
 echo -e "\n${C_YELLOW}Next steps:${C_RESET}"
-echo -e "1. Set your domain name in Nginx:"
-echo -e "   Edit: ${C_BOLD}sudo nano ${NGINX_AVAILABLE}${C_RESET} and change ${C_BOLD}server_name _;${C_RESET} to your actual domain."
-echo -e "   Then test & reload: ${C_BOLD}sudo nginx -t && sudo systemctl reload nginx${C_RESET}"
-echo -e "\n2. Optional: Enable free SSL via Certbot:"
-echo -e "   ${C_BOLD}sudo certbot --nginx -d your-domain.com${C_RESET}\n"
+echo -e "1. Set domain in Nginx: ${C_BOLD}sudo nano ${NGINX_AVAILABLE}${C_RESET} (change server_name)"
+echo -e "2. Apply changes:       ${C_BOLD}sudo nginx -t && sudo systemctl reload nginx${C_RESET}"
+echo -e "3. Optional SSL:        ${C_BOLD}sudo certbot --nginx -d your-domain.com${C_RESET}\n"

@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.git
+.gitignore
+.idea
+playwright-report
+test-results
+blob-report
+cache
+*.tsbuildinfo
+.env*.local
+README.md
+DESIGN.md
+CLAUDE.md
+LICENSE
+deploy
