@@ -48,8 +48,8 @@ Versions verified against the npm registry on 2026-09-09.
 | `remark-parse` | 11.0.0 | markdown -> mdast |
 | `remark-gfm` | 4.0.1 | tables, task lists, strikethrough, autolinks, footnotes |
 | `remark-math` | 6.0.0 | `$...$` / `$$...$$` |
-| `remark-frontmatter` | latest 5.x | YAML front matter |
-| `remark-rehype` | latest 11.x | mdast -> hast |
+| `remark-frontmatter` | 5.0.0 | YAML front matter |
+| `remark-rehype` | 11.1.2 | mdast -> hast |
 | `rehype-raw` | 7.0.0 | inline/raw HTML |
 | `rehype-sanitize` | 6.0.0 | allowlist |
 | `rehype-remark` | 10.0.1 | hast -> mdast (return path) |
