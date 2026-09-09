@@ -7,6 +7,7 @@ import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkFrontmatter from 'remark-frontmatter';
 import { remarkCaptureFrontMatter, rehypeFrontMatter } from './plugins/front-matter';
+import { rehypeFootnoteLabels, rehypeFootnotes } from './plugins/footnotes';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'hast';
 import { schema, DATA_IMAGE } from './sanitize-schema';
@@ -51,7 +52,11 @@ export function pipeline() {
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeFrontMatter)
+    .use(rehypeFootnoteLabels)
     .use(rehypeSanitize, schema)
+    /* After sanitize on purpose: this is the only code allowed to add an id, and
+       the schema deliberately strips ids that came from the document. */
+    .use(rehypeFootnotes)
     .use(rehypeDataImageOnly)
     .use(rehypeExternalLinks)
     .use(rehypeStringify, { allowDangerousHtml: false });

@@ -10,10 +10,6 @@ The legacy renderer ran its emphasis pass over its own generated HTML, so the
 visible in `tests/golden/reference-links.html`. That is a bug in the old build;
 the new pipeline emits a correct `target`, so the stray `<em>` is gone.
 
-`footnotes: hr`
-Pending: the `<hr class="fn-sep">` separator above the footnote list is not yet
-emitted. Removed in Task 6.
-
 `math: span`
 `math: div`
 `math: code`
