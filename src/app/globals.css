@@ -1,0 +1,9 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-canvas: oklch(0.98 0.002 260);
+  --color-text-primary: oklch(0.22 0.01 260);
+}
+
+html, body { height: 100%; }
+body { background: var(--color-canvas); color: var(--color-text-primary); }
