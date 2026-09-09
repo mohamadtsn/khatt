@@ -66,3 +66,9 @@ test('imports a file dropped onto the window', async ({ page }) => {
   });
   await expect(page.getByRole('button', { name: 'dropped.md', exact: true })).toBeVisible();
 });
+
+test('Ctrl/Cmd+S saves the document as a file', async ({ page }) => {
+  const download = page.waitForEvent('download');
+  await page.keyboard.press('ControlOrMeta+s');
+  expect((await download).suggestedFilename()).toBe('document.md');
+});

@@ -11,6 +11,7 @@ import { ReadingControls } from '@/components/chrome/ReadingControls';
 import { DropZone } from '@/components/chrome/DropZone';
 import { useSyncedScroll } from '@/components/preview/useSyncedScroll';
 import { useDocuments } from '@/state/documents';
+import { downloadMarkdown } from '@/lib/export';
 import { useUi } from '@/state/ui';
 
 export default function Page() {
@@ -22,6 +23,20 @@ export default function Page() {
     useDocuments.getState().hydrate(window.localStorage);
     useUi.getState().hydrate(window.localStorage);
     setReady(true);
+  }, []);
+
+  /* Ctrl/Cmd+S saves the document as a file. The browser's own "save page"
+     dialog is useless here, so the default is replaced rather than supplemented. */
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key !== 's') return;
+      e.preventDefault();
+      const { documents, activeId } = useDocuments.getState();
+      const doc = documents.find((d) => d.id === activeId);
+      if (doc) downloadMarkdown(doc);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const explorer = useUi((s) => s.explorer);

@@ -4,63 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A zero-dependency, client-side markdown editor served as a static site at `markdowneditor.ir` (GitHub Pages via `CNAME`). Four files matter: `index.html`, `styles.css`, `app.js`, and `README.md`.
+A client-side markdown editor served as a static site at `markdowneditor.ir` (GitHub Pages via `CNAME`). Next.js 16 App Router, React 19, Tailwind CSS 4, TypeScript strict. There is no backend and no runtime network access: everything is `localStorage`, and every third-party library is bundled and served from our own origin.
+
+Two documents carry the reasoning behind the code and are worth reading before a non-trivial change:
+
+- `DESIGN.md` — the living design system (tokens, materials, motion, accessibility). Extend it rather than re-deriving its rules.
+- `docs/superpowers/specs/2026-09-09-nextjs-rewrite-design.md` — why the architecture is what it is.
 
 ## Commands
 
-There is no build, no package manager, no test suite, no linter. The site *is* the source.
-
 ```sh
-python3 -m http.server 8000      # then open http://localhost:8000
+npm run dev        # http://localhost:3000
+npm test           # Vitest, node environment — everything under src/lib/ is DOM-free
+npm run e2e        # Playwright, against the real static export (not the dev server)
+npm run typecheck  # tsc --noEmit
+npm run build      # static export into out/
 ```
 
-`file://` also works — `app.js` is a plain IIFE, deliberately not `type="module"`, so the app opens without a server. Verification is manual: open the page and exercise the feature.
+`npm run e2e` builds and serves `out/` on purpose. The dev server hands over every module eagerly, which would make the "a document with no diagram fetches zero diagram bytes" assertions pass without meaning anything.
+
+The build runs through webpack (`next build --webpack`) because `@serwist/next` configures webpack, which Next 16 otherwise no longer uses.
 
 ## Architecture
 
-`app.js` is a single ~2700-line IIFE split into numbered sections (`/* === N. Title === */`), listed in a table of contents at the top of the file. Section numbers are referenced from comments in `styles.css` (e.g. "rendered by app.js §3b"), so keep numbering stable and update both sides when sections move.
+**The pure core is `src/lib/`.** No DOM, no React, so it is unit-testable in Node. React components are a thin shell over it.
 
-**The render pipeline** (`update()`, §4) is the spine:
+**The render pipeline** (`src/lib/markdown/parse.ts`) is the spine:
 
 ```
-editor.value → render()  (§1, hand-written markdown → HTML)
-             → sanitize() (allowlist of tags/attrs, kills on* handlers and unsafe schemes)
-             → preview.innerHTML
-             → scheduleMermaidRender() / scheduleMathRender() / scheduleHighlight()
-             → persist() (debounced localStorage write)
+markdown → remark-parse → remark-gfm / remark-math / remark-frontmatter
+         → remark-rehype → rehype-raw → rehype-sanitize
+         → footnotes / lazy-blocks / task-list plugins
+         → HTML string → preview.innerHTML
+         → highlightIn() / renderMathIn() / renderMermaidIn()
 ```
 
-Lazy renderers run *after* sanitize on purpose: they inject trusted library output (Mermaid SVG, KaTeX, highlight.js) that the sanitizer would strip. Never move them inside the sanitize step.
+Three rules hold this together:
 
-**Bidirectional editing.** The preview is `contenteditable`. Typing there runs `syncPreviewToMarkdown()` (§5), which serializes the preview through Turndown back into `editor.value` — a full-document rewrite. Because of that, the Turndown rules in `getTurndown()` are tuned to emit exactly the spellings `render()` accepts (`~~strike~~`, `- ` bullets with 2-space nesting, `---` rules), otherwise editing one word reformats the entire file. Any change to the renderer's accepted syntax needs a matching Turndown rule.
+1. **Lazy passes run after sanitization, never inside it.** Mermaid, KaTeX and Shiki inject trusted library output that the sanitizer would strip. The same applies to the footnotes plugin, which is the *only* code allowed to introduce an `id` — the schema deliberately strips every id that came from the document, so a document can never shadow one of the app's own elements.
 
-Where a full round trip is too destructive there are surgical paths instead — e.g. `toggleTaskInMarkdown()` edits the single `[ ]`/`[x]` character rather than re-serializing. Prefer that pattern for other small preview mutations.
+2. **The return path shares the forward path's configuration.** `stringify.ts` (rehype-parse → rehype-remark → remark-stringify) must emit exactly the spellings `parse.ts` accepts. `tests/unit/markdown/round-trip.test.ts` enforces this: `md → HTML → md` must reach a fixed point after one pass. If it does not, editing one word in the preview reformats the whole document. Do not weaken that test to make a change pass.
 
-Generated blocks (footnotes, front matter, diagrams, math) are marked `contenteditable="false"` so the round trip survives.
+3. **Where a full round trip is too destructive there are surgical paths.** `toggleTask()` flips one `[ ]`/`[x]` character rather than re-serializing. Prefer that pattern for other small preview mutations. Generated blocks (footnotes, front matter, diagrams, math) are `contenteditable="false"` so the round trip survives them, and their markdown source rides along in `data-fm` / `data-mmd` / `data-tex` / `data-fn-src`.
 
-**Lazy third-party loading.** Nothing external is on the critical path. Mermaid (ESM import), KaTeX, highlight.js and Turndown are fetched from jsDelivr, pinned by version, only the first time a document actually needs them (`ensureMermaid`, `ensureKatex`, `ensureHljs`, `ensureTurndown`). A document with no diagram costs zero bytes. Preserve this — it's a stated privacy property in the README.
+**Parity with the previous build is a test, not a claim.** The old hand-written renderer's output was captured as golden snapshots (`tests/golden/`) before it was deleted. `tests/unit/markdown/parity.test.ts` compares every render against them, and any difference must be justified in `tests/golden/DIVERGENCES.md` or the test fails. The old build is recoverable at tag `pre-rewrite`.
 
-**Undo** (§4b) does not use the textarea's native stack, because assigning `editor.value` on document switch wipes it. Each document gets its own snapshot history in a `Map`, never persisted. Editor mutations that should stay undoable go through `typeText()`/`deleteRange()` (`document.execCommand`), not direct `.value` assignment.
+**Editing surface.** CodeMirror 6, with **one `EditorState` per document** held in a `Map` and switched with `view.setState()`. That is why undo history is per-document and needs no hand-rolled snapshot stack. Anything that should stay undoable goes through a single `view.dispatch` — one dispatch is one undo step, which is what makes "Replace all" and "Clear" reversible in one keystroke. `isolateHistory` is used where a command would otherwise merge into the edit before it.
 
-**Persistence.** All state is `localStorage`, keys defined together in §3 (`md-editor-files`, `md-editor-active-file`, `md-editor-theme`, `md-editor-dir`, `md-editor-split`, `md-editor-sync`, `md-editor-explorer`). `md-editor-content` is a legacy single-document key kept only as a migration fallback in `loadWorkspace()`. Documents are an array of `{id, name, content, dir}`; direction is per-document, with `DIR_KEY` as the fallback for new ones.
+**State.** Two zustand stores, `src/state/documents.ts` and `src/state/ui.ts`. Persistence is a side effect of every mutation, so no path through a store can leave `localStorage` stale.
 
-**Theming** is CSS custom properties under `[data-theme]` in `styles.css`. Three JS-side rethemers must be called when the theme flips: `rethemeMermaid()`, `rethemeHljs()` (swaps the stylesheet href), and the KaTeX path which inherits CSS.
+**Persistence keys are a compatibility contract** with the previous build and must not change: `md-editor-files`, `md-editor-active-file`, `md-editor-theme`, `md-editor-dir`, `md-editor-split`, `md-editor-sync`, `md-editor-explorer`. `md-editor-content` is a legacy single-document key, read-only, kept as a migration fallback. Documents are `{ id, name, content, dir }`; direction is per-document with `md-editor-dir` as the fallback for new ones.
+
+**Theming.** A blocking inline script in `<head>` (`src/app/layout.tsx`) stamps `data-theme` before first paint. React must never read the stored theme during render — that is what causes a hydration mismatch and a flash of the wrong palette. Dark is defined twice in `globals.css`, once under a guarded media query for the "system" setting and once under `[data-theme="dark"]`; both are needed for the toggle to win in both directions. The lazy renderers re-theme by recording the theme they rendered under in `data-rendered` / `data-hl`, so a flip re-renders each block exactly once.
+
+**PWA.** Serwist precaches the shell. Mermaid, KaTeX and Shiki are deliberately *excluded* from the precache manifest — precaching them would cost every user the bytes the lazy-loading design exists to avoid. They enter the runtime cache the first time a document needs one.
 
 ## Conventions
 
-- Comments explain *why*, often the non-obvious constraint that forced the code (see the undo, Turndown and checkbox-attribute comments). Match that register; don't add narrating comments.
-- Terse style: compact one-line functions, `;`-terminated, minimal whitespace around operators.
-- Everything stays inside the IIFE — nothing may leak to `window`, since this file defines names like `render`, `update`, `save` and `main` that would collide with CDN globals.
-- New icons are `<symbol id="i-…">` in the inline SVG sprite at the top of `index.html`, referenced by `<use href="#i-…">`.
-- The header's DOM order is the narrow-screen order; desktop layout reorders with CSS.
-- When adding a markdown feature, update the "Markdown it understands" or "Features" table in `README.md`.
-
-<!-- BEGIN:nextjs-agent-rules -->
-
-# This is NOT the Next.js you know
-
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+- Comments explain *why*, usually the non-obvious constraint that forced the code. Match that register; don't add narrating comments.
+- Components may only use semantic design tokens (`--color-*`, `--shadow-*`, `--radius-*`, `--dur-*`), never the primitive scale. See `DESIGN.md`.
+- Animate `transform` and `opacity` only. Never `width`, `height`, `filter` or `backdrop-filter`.
+- Icon-only buttons always carry a `label` prop, which becomes `aria-label`; E2E tests address controls by those accessible names, so renaming one is a breaking change to the test suite.
+- New icons are a `<symbol id="i-…">` in `src/components/ui/Icon.tsx`, referenced by name through `<Icon name="…" />`.
+- When adding a markdown feature, add a fixture to `tests/fixtures/`, update the "Markdown it understands" table in `README.md`, and check the round-trip test still reaches a fixed point.

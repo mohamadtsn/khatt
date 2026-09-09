@@ -4,15 +4,13 @@
 
 **A fast, no-nonsense markdown editor that runs entirely in your browser.**
 
-No build step. No server. No account. Just open it and write.
+No server. No account. Works offline. Just open it and write.
 
 [**→ Try it live**](https://markdowneditor.ir/)
 
 </div>
 
-<!-- Tip: drop a screenshot at docs/screenshot.png and uncomment the line below.
-![Markdown Editor](docs/screenshot.png)
--->
+![Markdown Editor](docs/screenshot-light.png)
 
 ---
 
@@ -57,6 +55,8 @@ Everything you open is saved in your own browser and never sent anywhere. There 
 - **Dark & light themes**, remembered between visits
 - **RTL / LTR**: full right-to-left support for Persian, Arabic and Hebrew, remembered independently for each document
 - **Sync scroll** between the two panes (toggleable)
+- **Install it**: it is a PWA, so it can be installed as an app and **works with no network at all**
+- **Follows your system theme** by default, and remembers an explicit choice
 
 ## Markdown it understands
 
@@ -90,4 +90,21 @@ Everything you open is saved in your own browser and never sent anywhere. There 
 
 ## Privacy
 
-Everything runs client-side. There is no analytics, no account, and no upload. Your document lives in this browser's local storage and nowhere else. The diagram, math and highlighting libraries are fetched from a CDN the first time a document actually uses one of them, and never on a document that doesn't.
+Everything runs client-side. There is no analytics, no account, and no upload. Your documents live in this browser's local storage and nowhere else.
+
+After the page has loaded, the app makes **no network request at all** — not even to a CDN. The diagram, math and highlighting libraries are bundled with the app and loaded from it, and only the first time a document actually uses one; a document with no diagram never costs you the diagram renderer.
+
+## Development
+
+```sh
+npm install
+npm run dev        # http://localhost:3000
+npm test           # unit tests (Vitest)
+npm run e2e        # end-to-end tests (Playwright, against the real static export)
+npm run build      # static export into out/
+```
+
+The markdown engine is proved against the previous hand-written renderer: its
+output was captured as golden snapshots before it was removed, and every render
+is still compared against them. See `tests/golden/DIVERGENCES.md` for the
+differences that are deliberate, and `DESIGN.md` for the design system.
