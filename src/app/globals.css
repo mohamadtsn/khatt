@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './preview.css';
 
 /* Primitive scale. Components never reference these directly. */
 @theme {

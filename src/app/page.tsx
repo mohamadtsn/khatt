@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { CodeEditor } from '@/components/editor/CodeEditor';
 import { FindBar } from '@/components/chrome/FindBar';
+import { Preview } from '@/components/preview/Preview';
 import { Menu, MenuItem } from '@/components/ui/Menu';
 import { Icon } from '@/components/ui/Icon';
 import { toast } from '@/components/ui/Toast';
@@ -34,7 +35,9 @@ export default function Page() {
         <section className="min-h-0 overflow-hidden">
           <CodeEditor />
         </section>
-        <section className="preview min-h-0 overflow-auto border-s border-[var(--color-border)] p-6" />
+        <section className="min-h-0 border-s border-[var(--color-border)]">
+          <Preview />
+        </section>
       </div>
     </main>
   );

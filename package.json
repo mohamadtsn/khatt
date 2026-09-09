@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "capture-golden": "node scripts/capture-golden.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "serve:out": "python3 -m http.server 3000 --directory out --bind 127.0.0.1"
   },
   "dependencies": {
     "@codemirror/commands": "^6.11.0",
