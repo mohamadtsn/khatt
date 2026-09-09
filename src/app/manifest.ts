@@ -4,8 +4,8 @@ export const dynamic = 'force-static';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Markdown Editor',
-    short_name: 'Markdown',
+    name: 'Khatt',
+    short_name: 'Khatt',
     description: 'A fast markdown editor that runs entirely in your browser.',
     start_url: '/',
     display: 'standalone',

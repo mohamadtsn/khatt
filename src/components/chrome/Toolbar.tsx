@@ -47,7 +47,7 @@ export function Toolbar({ onOpenFile }: { onOpenFile: () => void }) {
       <ExplorerToggle />
       <span className="inline-flex items-center gap-1.5 px-1 text-[13px] font-semibold">
         <Icon name="brand" className="text-[var(--color-accent)]" />
-        <span className="hidden sm:inline">{doc?.name ?? 'Markdown Editor'}</span>
+        <span className="hidden sm:inline">{doc?.name ?? 'Khatt'}</span>
       </span>
 
       <span className="flex-1" />

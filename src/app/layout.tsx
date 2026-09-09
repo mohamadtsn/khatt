@@ -4,7 +4,7 @@ import { ToastHost } from '@/components/ui/Toast';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Markdown Editor',
+  title: 'Khatt',
   description: 'A fast markdown editor that runs entirely in your browser.',
 };
 
