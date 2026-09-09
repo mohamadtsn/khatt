@@ -1,7 +1,6 @@
 # Design System
 
-The living reference for this app's interface. `docs/superpowers/specs/` records
-what was decided once; this file records the system, so later work extends it
+The living reference for this app's interface; this file records the design system, so later work extends it
 without re-deriving the rules.
 
 ## Principles

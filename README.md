@@ -1,110 +1,167 @@
 <div align="center">
 
-# ✎ Markdown Editor
+# Khatt
 
-**A fast, no-nonsense markdown editor that runs entirely in your browser.**
+**A fast, distraction-free, bidirectional Markdown editor that runs entirely in the browser.**
 
-No server. No account. Works offline. Just open it and write.
-
-[**→ Try it live**](https://markdowneditor.ir/)
+No backend. No tracking. Zero network requests after load. Fully offline-capable.
 
 </div>
 
-![Markdown Editor](docs/screenshot-light.png)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot-dark.png">
+    <img alt="Khatt Editor Screenshot" src="assets/screenshot-light.png" width="100%">
+  </picture>
+</p>
 
 ---
 
-The right pane is not just a preview, you can write in it. Click in and type, or select text and a formatting toolbar appears; everything you do is written back as markdown on the left. The left pane is the markdown source, and the two stay in step. You can keep several documents open at once and switch between them from the explorer on the left.
+## Overview
 
-Everything you open is saved in your own browser and never sent anywhere. There is no backend.
+Khatt is a client-side writing environment built for speed, privacy, and precision. It pairs a raw Markdown source editor with a live rendered preview that is itself fully editable (`contenteditable`). Changes made in the preview serialize back to Markdown through a unified AST pipeline without degrading document formatting.
 
-## Features
+Every document is stored locally in the browser (`localStorage`). Once loaded, the application operates entirely offline without making external network calls.
 
-**Workspace**
+---
 
-- **Explorer**: keep several documents open at once, switch between them, create, rename and close them
-- **Import**: open one or more `.md` files, or drag them onto the window
-- **Autosave**: every open document is kept in this browser as you write, and the workspace comes back on your next visit
+## Key Capabilities
 
-**Writing**
+### Bidirectional Live Editing
+- **Dual-Pane Sync**: Left pane provides raw Markdown editing powered by CodeMirror 6. Right pane displays rendered HTML.
+- **Editable Preview**: Click and type directly into the rendered output. Selecting text displays an inline formatting toolbar for headings, lists, tables, links, and text styles. Changes serialize back into clean Markdown.
+- **Surgical Checkbox Toggle**: Toggling interactive task lists (`- [ ]` / `- [x]`) updates the raw markdown source at the exact character offset without reformatting the surrounding document.
+- **Synchronized Scrolling**: Proportional sync-scroll keeps source and preview aligned during navigation (can be toggled on/off).
 
-- **Live preview**: renders as you type, in a resizable split view
-- **Editable preview**: type directly into the rendered side; it syncs back to markdown
-- **Formatting toolbar**: select text or right-click inside the preview for bold, italic, code, headings (H1–H6), lists, links and tables
-- **Find & replace**: `Ctrl/Cmd + F`, with a match count and undoable replacements
-- **Smart lists**: Enter continues the current bullet, number or checkbox; Tab nests it
+### Performance & Lazy Loading
+- **Zero Idle Overhead**: Heavy rendering engines (Mermaid for diagrams, KaTeX for math, and Shiki for code syntax highlighting) are split into isolated chunks. They are downloaded and executed only when a document contains matching blocks. A document with no diagrams downloads 0 bytes of Mermaid.
+- **Theme-Aware Re-rendering**: Diagram and code blocks track the theme under which they were generated and re-render only when switching between light and dark modes.
 
-**Rendering**
+### Privacy & Offline-First (PWA)
+- **100% Client-Side**: No backend, no telemetry, no analytics, no external CDN dependencies at runtime.
+- **Installable PWA**: Pre-caches the application shell via Serwist. Functions completely without an internet connection.
+- **Multi-Document Workspace**: Built-in explorer sidebar to create, rename, switch, and delete documents. Includes drag-and-drop `.md` file import and automatic local persistence.
 
-- **Nested lists** and **checklists**: `- [ ]` / `- [x]` become real checkboxes you can tick
-- **Tables** with `:---:` column alignment, or insert one at any size
-- **Syntax highlighting**: name a language on a fence and the code is coloured
-- **Mermaid diagrams**: a ```` ```mermaid ```` fence renders live (flowchart, sequence, class, gantt…)
-- **LaTeX math**: inline `$…$` and display `$$…$$`, rendered with KaTeX
-- **Footnotes**: `text[^1]` collects into a linked list at the end
-- **Autolinks, reference links & inline HTML**: bare URLs become links, `[text][ref]` resolves against `[ref]: url`, and `<details>` blocks work
+### Internationalization & Comfort
+- **First-Class RTL**: Native right-to-left layout and typography with the Vazirmatn font stack for Persian, Arabic, and Hebrew. Direction state is preserved independently per document.
+- **Reading Mode**: Distraction-free, full-width presentation mode with an optional edit lock to prevent accidental changes.
+- **System-Aware Theming**: Supports light, dark, and system themes. Initialized via a blocking head script to eliminate flash-of-unstyled-theme (FOUC) and hydration mismatches.
 
-**Output**
+### Export & Clipboard
+- **Export**: Download as raw Markdown (`.md`), standalone self-contained HTML (`.html`), or vector-clean PDF (via the browser print engine with a dedicated print stylesheet).
+- **Clipboard**: Copy content directly as formatted Markdown, rendered HTML, or plain text.
 
-- **Export**: Markdown, PDF (through the browser's own print engine, so the text stays selectable) or a self-contained HTML file
-- **Copy**: as Markdown, HTML or plain text
+---
 
-**Comfort**
+## Markdown Syntax Support
 
-- **Reading mode**: distraction-free and editable by default; use the lock button for a fully read-only view
-- **Dark & light themes**, remembered between visits
-- **RTL / LTR**: full right-to-left support for Persian, Arabic and Hebrew, remembered independently for each document
-- **Sync scroll** between the two panes (toggleable)
-- **Install it**: it is a PWA, so it can be installed as an app and **works with no network at all**
-- **Follows your system theme** by default, and remembers an explicit choice
+The parser pipeline implements GitHub Flavored Markdown (GFM), math typesetting, footnotes, and front matter:
 
-## Markdown it understands
+| Syntax | Description | Example |
+| :--- | :--- | :--- |
+| `**bold**` / `*italic*` / `~~strike~~` | Inline text emphasis | **bold**, *italic*, ~~strike~~ |
+| `` `code` `` | Inline code span | `const x = 42;` |
+| `# H1` … `###### H6` | Headings (level 1 to 6) | `## Section Title` |
+| `> quote` | Blockquotes | `> Quoted text block` |
+| `- item` / `1. item` | Unordered and ordered lists | Indent with 2/4 spaces to nest |
+| `- [ ]` / `- [x]` | Interactive task checkboxes | `- [x] Completed task` |
+| `[text](url)` or `<url>` | Hyperlinks and bare URLs | `[Link](url)` |
+| `[text][ref]` + `[ref]: url` | Reference-style links | Resolves against reference definition |
+| `![alt](image.png)` | Embedded images | `![Logo](icon.svg)` |
+| <code>\`\`\`lang</code> | Syntax-highlighted code blocks | Powered on demand by Shiki |
+| <code>\`\`\`mermaid</code> | Dynamic diagrams & flowcharts | Powered on demand by Mermaid |
+| `$x^2$` / `$$\int f(x)dx$$` | Inline and block LaTeX math | Powered on demand by KaTeX |
+| `text[^1]` + `[^1]: note` | Footnotes | Collates into linked notes at document bottom |
+| `\|:---\|:---:\|---:\|` | Tables with column alignment | Left, center, and right alignments |
+| `---` | YAML front matter panel | Rendered as an inert, editable metadata block |
 
-| Syntax | Result |
-| --- | --- |
-| `**bold**` `*italic*` `~~strike~~` | **bold** *italic* ~~strike~~ |
-| `` `code` `` | inline code |
-| `# H1` … `###### H6` | headings |
-| `> quote` | blockquote |
-| `- item` / `1. item` | lists, indent to nest |
-| `- [ ]` / `- [x]` | checkboxes |
-| `[text](url)` or a bare URL | links |
-| `[text][ref]` + `[ref]: url` | reference links |
-| `![alt](src)` | images |
-| <code>\`\`\`js</code> | code block, highlighted |
-| <code>\`\`\`mermaid</code> | diagram |
-| `$x^2$` / `$$…$$` | math |
-| `text[^1]` + `[^1]: note` | footnotes |
-| `\|:---\|:---:\|---:\|` | table column alignment |
+---
 
-## Keyboard shortcuts
+## Keyboard Shortcuts
 
 | Shortcut | Action |
-| --- | --- |
-| `Ctrl/Cmd + S` | Save as `.md` |
-| `Ctrl/Cmd + F` | Find & replace |
-| `Ctrl/Cmd + Z` | Undo, including Clear and Replace all |
-| `Enter` | Continue the current list / checklist |
-| `Tab` | Indent (nests a list item) |
-| `Esc` | Close the find bar, a dialog, or reading mode |
+| :--- | :--- |
+| `Ctrl` / `Cmd` + `S` | Export / Save document as `.md` |
+| `Ctrl` / `Cmd` + `F` | Open find and replace bar |
+| `Ctrl` / `Cmd` + `Z` | Undo (preserves history across batch actions like Replace All) |
+| `Enter` | Continue active list, numbered item, or checkbox |
+| `Tab` | Indent / nest list item |
+| `Shift` + `Tab` | Outdent list item |
+| `Esc` | Dismiss find bar, open dialogs, or exit reading mode |
 
-## Privacy
+---
 
-Everything runs client-side. There is no analytics, no account, and no upload. Your documents live in this browser's local storage and nowhere else.
+## Architecture
 
-After the page has loaded, the app makes **no network request at all** — not even to a CDN. The diagram, math and highlighting libraries are bundled with the app and loaded from it, and only the first time a document actually uses one; a document with no diagram never costs you the diagram renderer.
+### Pure Core & Render Pipeline
+The core markdown processing resides in `src/lib/` and is strictly DOM-free and unit-testable in Node.js:
+
+```
+Markdown Source
+      │
+      ▼
+remark-parse ──► remark-gfm / remark-math / remark-frontmatter
+      │
+      ▼
+remark-rehype ──► rehype-raw ──► rehype-sanitize
+      │
+      ▼
+footnotes / lazy-blocks / task-list plugins
+      │
+      ▼
+HTML string ──► preview.innerHTML
+      │
+      ├─► highlightIn()      (Shiki, on demand)
+      ├─► renderMathIn()     (KaTeX, on demand)
+      └─► renderMermaidIn()  (Mermaid, on demand)
+```
+
+### AST Round-Trip Invariant
+The return pipeline (`src/lib/markdown/stringify.ts`) shares the parser's configuration (`rehype-parse` → `rehype-remark` → `remark-stringify`) ensuring that `Markdown → HTML → Markdown` reaches an idempotent fixed point after a single pass. Modifying text in the preview preserves formatting across the rest of the document.
+
+### Isolated Editor State
+CodeMirror 6 maintains an independent `EditorState` instance per open document inside a memory map. Switching documents swaps state via `view.setState()`, maintaining separate undo/redo stacks per document without custom serialization layers.
+
+---
 
 ## Development
 
+### Prerequisites
+- Node.js 22+ (Node.js 24 recommended)
+- npm
+
+### Setup
 ```sh
+# Clone repository
+git clone <repo-url>
+cd khatt
+
+# Install dependencies
 npm install
-npm run dev        # http://localhost:3000
-npm test           # unit tests (Vitest)
-npm run e2e        # end-to-end tests (Playwright, against the real static export)
-npm run build      # static export into out/
 ```
 
-The markdown engine is proved against the previous hand-written renderer: its
-output was captured as golden snapshots before it was removed, and every render
-is still compared against them. See `tests/golden/DIVERGENCES.md` for the
-differences that are deliberate, and `DESIGN.md` for the design system.
+### Commands
+```sh
+# Start local development server
+npm run dev
+
+# Run unit tests (Vitest)
+npm test
+
+# Run type check (TypeScript strict)
+npm run typecheck
+
+# Run end-to-end integration tests (Playwright against static export)
+npm run e2e
+
+# Build production static export (outputs to out/)
+npm run build
+```
+
+> **Note on E2E Testing**: `npm run e2e` runs against the static production export (`out/`) rather than the development server to verify that code splitting, PWA caching, and lazy bundle execution behave properly in production.
+
+---
+
+## License
+
+This project is licensed under the terms of the GNU General Public License v3.0 (GPL-3.0). See the [LICENSE](LICENSE) file for details.

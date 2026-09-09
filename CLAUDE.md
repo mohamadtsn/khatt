@@ -4,12 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A client-side markdown editor served as a static site at `markdowneditor.ir` (GitHub Pages via `CNAME`). Next.js 16 App Router, React 19, Tailwind CSS 4, TypeScript strict. There is no backend and no runtime network access: everything is `localStorage`, and every third-party library is bundled and served from our own origin.
+Khatt: A fast client-side markdown editor. Next.js 16 App Router, React 19, Tailwind CSS 4, TypeScript strict. There is no backend and no runtime network access: everything is `localStorage`, and every third-party library is bundled and served from our own origin.
 
-Two documents carry the reasoning behind the code and are worth reading before a non-trivial change:
+The document carrying the reasoning behind the design system:
 
 - `DESIGN.md` — the living design system (tokens, materials, motion, accessibility). Extend it rather than re-deriving its rules.
-- `docs/superpowers/specs/2026-09-09-nextjs-rewrite-design.md` — why the architecture is what it is.
 
 ## Commands
 
