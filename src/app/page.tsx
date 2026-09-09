@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { CodeEditor } from '@/components/editor/CodeEditor';
 import { FindBar } from '@/components/chrome/FindBar';
 import { Preview } from '@/components/preview/Preview';
+import { ThemeToggle } from '@/components/chrome/ThemeToggle';
 import { Menu, MenuItem } from '@/components/ui/Menu';
 import { Icon } from '@/components/ui/Icon';
 import { toast } from '@/components/ui/Toast';
@@ -25,7 +26,8 @@ export default function Page() {
   return (
     <main className="grid h-full grid-rows-[auto_1fr]">
       {/* Temporary chrome: the real toolbar replaces this in Task 22. */}
-      <header className="material flex h-11 items-center justify-end px-2">
+      <header className="material flex h-11 items-center justify-end gap-1 px-2">
+        <ThemeToggle />
         <Menu trigger={<Icon name="more" />} label="More actions">
           <MenuItem onSelect={() => toast('Nothing here yet')}>Say hello</MenuItem>
         </Menu>
