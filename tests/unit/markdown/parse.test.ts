@@ -15,11 +15,16 @@ describe('parse', () => {
     expect(html).toContain('align="right"');
   });
 
-  it('renders task list items as disabled checkboxes', () => {
+  /* The boxes stay interactive: ticking one in the preview is how a task is
+     completed, and the legacy renderer emitted them the same way. */
+  it('renders task list items as labelled, interactive checkboxes', () => {
     const html = parse('- [ ] todo\n- [x] done');
     expect(html).toContain('type="checkbox"');
-    expect(html).toContain('disabled');
+    expect(html).not.toContain('disabled');
     expect(html).toContain('checked');
+    expect(html).toContain('aria-label="todo"');
+    expect(html).toMatch(/<ul class="[^"]*\btask-list\b/);
+    expect(html).toContain('task-item');
   });
 
   it('autolinks a bare URL', () => {

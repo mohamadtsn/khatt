@@ -10,6 +10,7 @@ import { remarkCaptureFrontMatter, rehypeFrontMatter } from './plugins/front-mat
 import { rehypeFootnoteLabels, rehypeFootnotes } from './plugins/footnotes';
 import remarkMath from 'remark-math';
 import { rehypeLazyBlocks } from './plugins/lazy-blocks';
+import { rehypeTaskList } from './plugins/task-list';
 import { visit } from 'unist-util-visit';
 import type { Root } from 'hast';
 import { schema, DATA_IMAGE } from './sanitize-schema';
@@ -61,6 +62,7 @@ export function pipeline() {
        the schema deliberately strips ids that came from the document. */
     .use(rehypeFootnotes)
     .use(rehypeLazyBlocks)
+    .use(rehypeTaskList)
     .use(rehypeDataImageOnly)
     .use(rehypeExternalLinks)
     .use(rehypeStringify, { allowDangerousHtml: false });
