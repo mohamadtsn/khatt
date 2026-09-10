@@ -44,6 +44,19 @@ log_success() { echo -e "${C_GREEN}${C_BOLD}[SUCCESS]${C_RESET} $*"; }
 log_warn()    { echo -e "${C_YELLOW}${C_BOLD}[WARN]${C_RESET} $*"; }
 log_error()   { echo -e "${C_RED}${C_BOLD}[ERROR]${C_RESET} $*" >&2; }
 
+# A deploy that stops early must never exit silently: `set -e` and a child that
+# eats the piped script body both end the process without a word otherwise.
+DEPLOY_COMPLETE=false
+on_exit() {
+    local code=$?
+    if [[ "${DEPLOY_COMPLETE}" != "true" ]]; then
+        log_error "Deployment aborted before completion (exit code ${code}) — nothing was published."
+        [[ ${code} -eq 0 ]] && exit 1
+    fi
+    exit ${code}
+}
+trap on_exit EXIT
+
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -59,6 +72,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: sudo $0 [--docker|--native]"
             echo "  --docker : Execute build inside Docker container (host doesn't need Node.js)"
             echo "  --native : Execute build directly on host using Node.js & npm"
+            DEPLOY_COMPLETE=true
             exit 0
             ;;
         *)
@@ -72,6 +86,12 @@ done
 # ------------------------------------------------------------------------------
 if [[ $EUID -ne 0 ]]; then
     log_warn "This script requires superuser privileges to deploy to ${WEB_ROOT} and manage Nginx."
+    # There is nothing to re-exec when the body arrived on stdin ("$0" is just
+    # "bash"), so say so instead of spawning a root shell on the script's name.
+    if [[ ! -f "$0" ]]; then
+        log_error "Piped into bash without root. Re-run as: curl -fsSL <url> | sudo bash"
+        exit 1
+    fi
     log_warn "Rerunning with sudo..."
     exec sudo -E bash "$0" "$@"
 fi
@@ -177,7 +197,7 @@ else
     SOURCE_DIR="${DEFAULT_SOURCE_DIR}"
     log_info "First-time setup: cloning ${REPO_URL} into ${SOURCE_DIR}..."
     mkdir -p "$(dirname "${SOURCE_DIR}")"
-    git clone --depth 1 -b "${BRANCH}" "${REPO_URL}" "${SOURCE_DIR}"
+    git clone --depth 1 -b "${BRANCH}" "${REPO_URL}" "${SOURCE_DIR}" < /dev/null
     cd "${SOURCE_DIR}"
 fi
 
@@ -189,25 +209,30 @@ log_success "Source repository ready at commit: $(git rev-parse --short HEAD)"
 if [[ "${BUILD_MODE}" == "native" ]]; then
     log_info "Installing dependencies via npm..."
     if [[ -f "package-lock.json" ]]; then
-        npm ci --prefer-offline --no-audit --no-fund
+        npm ci --prefer-offline --no-audit --no-fund < /dev/null
     else
-        npm install --no-audit --no-fund
+        npm install --no-audit --no-fund < /dev/null
     fi
 
     log_info "Compiling static export with Next.js..."
     export NEXT_TELEMETRY_DISABLED=1
     export NEXT_CPU_COUNT=1
     export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
-    npm run build
+    npm run build < /dev/null
 
 elif [[ "${BUILD_MODE}" == "docker" ]]; then
     log_info "Running static export inside Docker build container..."
     export NEXT_TELEMETRY_DISABLED=1
+    # Every child here gets </dev/null: when this script is piped in
+    # (curl ... | sudo bash) its own body lives on stdin, and "docker compose
+    # run" attaches stdin by default, swallowing the rest of the script. bash
+    # then hits EOF and exits 0 mid-deploy with no error. -T also keeps compose
+    # from allocating a TTY it will never have on a CI/ssh runner.
     if command -v docker &>/dev/null && docker compose version &>/dev/null; then
-        docker compose run --rm build
+        docker compose run --rm -T build < /dev/null
     else
         # Direct BuildKit export without needing docker-compose
-        DOCKER_BUILDKIT=1 docker build --target exporter --output type=local,dest=out .
+        DOCKER_BUILDKIT=1 docker build --target exporter --output type=local,dest=out . < /dev/null
     fi
 fi
 
@@ -281,3 +306,5 @@ echo -e "\n${C_YELLOW}Next steps:${C_RESET}"
 echo -e "1. Set domain in Nginx: ${C_BOLD}sudo nano ${NGINX_AVAILABLE}${C_RESET} (change server_name)"
 echo -e "2. Apply changes:       ${C_BOLD}sudo nginx -t && sudo systemctl reload nginx${C_RESET}"
 echo -e "3. Optional SSL:        ${C_BOLD}sudo certbot --nginx -d your-domain.com${C_RESET}\n"
+
+DEPLOY_COMPLETE=true
