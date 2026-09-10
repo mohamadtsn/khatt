@@ -126,6 +126,29 @@ fi
 log_info "Selected build engine: ${C_BOLD}${BUILD_MODE}${C_RESET}"
 
 # ------------------------------------------------------------------------------
+# 2.5 Server Resource & Swap Verification (Safeguard for 1GB/2GB VPS)
+# ------------------------------------------------------------------------------
+if command -v free &>/dev/null; then
+    TOTAL_MEM_MB=$(free -m | awk '/^Mem:/{print $2}')
+    TOTAL_SWAP_MB=$(free -m | awk '/^Swap:/{print $2}')
+
+    # Only create a swapfile if the server has ZERO swap and low physical RAM (<3GB)
+    if [[ "${TOTAL_SWAP_MB:-0}" -eq 0 && "${TOTAL_MEM_MB:-4096}" -lt 3072 ]]; then
+        log_warn "Zero swap detected on low-memory host (${TOTAL_MEM_MB}MB RAM)."
+        log_info "Setting up a 2GB /swapfile to protect build from OOM crash..."
+        if [[ ! -f /swapfile ]]; then
+            fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048
+            chmod 600 /swapfile
+            mkswap /swapfile 2>/dev/null
+            swapon /swapfile 2>/dev/null || true
+            log_success "2GB swapfile enabled."
+        else
+            swapon /swapfile 2>/dev/null || true
+        fi
+    fi
+fi
+
+# ------------------------------------------------------------------------------
 # 3. Source Repository Setup (Clone if first time, pull if existing)
 # ------------------------------------------------------------------------------
 CURRENT_GIT_ROOT=""
@@ -172,10 +195,14 @@ if [[ "${BUILD_MODE}" == "native" ]]; then
     fi
 
     log_info "Compiling static export with Next.js..."
+    export NEXT_TELEMETRY_DISABLED=1
+    export NEXT_CPU_COUNT=1
+    export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
     npm run build
 
 elif [[ "${BUILD_MODE}" == "docker" ]]; then
     log_info "Running static export inside Docker build container..."
+    export NEXT_TELEMETRY_DISABLED=1
     if command -v docker &>/dev/null && docker compose version &>/dev/null; then
         docker compose run --rm build
     else
